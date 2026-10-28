@@ -1,0 +1,7 @@
+services:
+  gastrack:
+    build: .
+    container_name: gastrack
+    restart: unless-stopped
+    ports:
+      - "8080:80"
