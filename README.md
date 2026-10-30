@@ -6,6 +6,7 @@ Application web (React + TypeScript + Vite) qui affiche sur une carte les prix d
 - Carte interactive (Leaflet / OpenStreetMap) avec une pastille de prix par station, du vert (moins cher) au rouge (plus cher)
 - Choix du carburant : Gazole, SP95-E10, SP95, SP98, E85, GPLc
 - Les 100 stations les moins chères de la zone visible (rayon automatique, 30 km max)
+- Stations chargées et affichées uniquement à partir d'un certain zoom (aucune requête sur une vue trop large, par exemple toute la France) : réglable via `MIN_ZOOM_FOR_STATIONS` dans `src/config.ts`
 - Liste synchronisée avec la carte, détail de tous les prix et lien d'itinéraire
 - Géolocalisation (« Autour de moi »)
 

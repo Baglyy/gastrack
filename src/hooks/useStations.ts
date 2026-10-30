@@ -8,11 +8,19 @@ interface State {
   error: string | null;
 }
 
-/** Charge les stations quand le centre, le rayon ou le carburant changent. */
-export function useStations(center: LatLon, radiusKm: number, fuel: FuelType): State {
+/**
+ * Charge les stations quand le centre, le rayon ou le carburant changent.
+ * Si `enabled` est faux (carte trop dézoomée), aucune requête n'est envoyée
+ * et une requête en cours est annulée.
+ */
+export function useStations(center: LatLon, radiusKm: number, fuel: FuelType, enabled: boolean): State {
   const [state, setState] = useState<State>({ stations: [], loading: true, error: null });
 
   useEffect(() => {
+    if (!enabled) {
+      setState({ stations: [], loading: false, error: null });
+      return;
+    }
     const controller = new AbortController();
     setState((s) => ({ ...s, loading: true, error: null }));
 
@@ -25,7 +33,7 @@ export function useStations(center: LatLon, radiusKm: number, fuel: FuelType): S
       });
 
     return () => controller.abort();
-  }, [center.lat, center.lon, radiusKm, fuel]);
+  }, [center.lat, center.lon, radiusKm, fuel, enabled]);
 
   return state;
 }

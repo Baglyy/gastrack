@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { INITIAL_ZOOM, LOCATE_ZOOM } from "../config";
 import type { LatLon, Station } from "../types/station";
 import { formatPrice, priceColor } from "../utils/format";
 import { StationPopup } from "./StationPopup";
@@ -11,7 +12,9 @@ interface Props {
   selected: Station | null;
   min: number;
   max: number;
-  onViewChange: (center: LatLon, radiusKm: number) => void;
+  /** Position à rejoindre (géolocalisation). `n` change à chaque demande. */
+  flyTarget: (LatLon & { n: number }) | null;
+  onViewChange: (center: LatLon, radiusKm: number, zoom: number) => void;
   onSelect: (id: string | null) => void;
 }
 
@@ -24,19 +27,18 @@ function ViewWatcher({ onViewChange }: Pick<Props, "onViewChange">) {
       const c = map.getCenter();
       const ne = map.getBounds().getNorthEast();
       const radius = Math.ceil(c.distanceTo(ne) / 1000);
-      onViewChange({ lat: c.lat, lon: c.lng }, Math.min(MAX_RADIUS_KM, Math.max(2, radius)));
+      onViewChange({ lat: c.lat, lon: c.lng }, Math.min(MAX_RADIUS_KM, Math.max(2, radius)), map.getZoom());
     },
   });
   return null;
 }
 
-/** Recentre la carte quand le centre change depuis l'extérieur (géolocalisation). */
-function Recenter({ center }: { center: LatLon }) {
+/** Rejoint la position demandée (géolocalisation) et zoome assez pour afficher les stations. */
+function FlyToTarget({ target }: { target: Props["flyTarget"] }) {
   const map = useMap();
   useEffect(() => {
-    const c = map.getCenter();
-    if (c.distanceTo([center.lat, center.lon]) > 500) map.flyTo([center.lat, center.lon], 13);
-  }, [center.lat, center.lon, map]);
+    if (target) map.flyTo([target.lat, target.lon], Math.max(map.getZoom(), LOCATE_ZOOM));
+  }, [target?.n, map]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
@@ -63,20 +65,20 @@ function pinIcon(station: Station, min: number, max: number, selected: boolean):
   });
 }
 
-export function MapView({ center, stations, selected, min, max, onViewChange, onSelect }: Props) {
+export function MapView({ center, stations, selected, min, max, flyTarget, onViewChange, onSelect }: Props) {
   const icons = useMemo(
     () => new Map(stations.map((s) => [s.id, pinIcon(s, min, max, s.id === selected?.id)])),
     [stations, min, max, selected?.id],
   );
 
   return (
-    <MapContainer center={[center.lat, center.lon]} zoom={12} className="map" zoomControl>
+    <MapContainer center={[center.lat, center.lon]} zoom={INITIAL_ZOOM} className="map" zoomControl>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ViewWatcher onViewChange={onViewChange} />
-      <Recenter center={center} />
+      <FlyToTarget target={flyTarget} />
       <FlyToSelected station={selected} />
       {stations.map((s) => (
         <Marker
